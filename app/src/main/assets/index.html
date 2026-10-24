@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>DarkX Draft</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b0f14;color:#e6edf3;font-family:system-ui,sans-serif;text-align:center;padding:14px}
+h1{color:#00ff9c;margin:8px 0}input,button{font-size:16px;padding:12px;border-radius:10px;border:0;margin:5px;width:min(260px,80vw)}
+input{background:#18202a;color:#fff;text-align:center}button{background:#00ff9c;color:#000;font-weight:700}button.s{background:#2a3441;color:#fff}
+#board{display:grid;grid-template-columns:repeat(8,1fr);width:min(96vw,480px);aspect-ratio:1;margin:10px auto;border:3px solid #00ff9c}
+.c{display:flex;align-items:center;justify-content:center;position:relative}.l{background:#d8c9a3}.d{background:#6b4a2f}
+.hl::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:#00ff9c;opacity:.8}.sel{outline:3px solid #00ff9c;outline-offset:-3px}
+.p{width:76%;height:76%;border-radius:50%;box-shadow:inset 0 -4px 6px #0006;display:flex;align-items:center;justify-content:center;color:gold;font-size:18px}
+.w{background:#f4f4f4}.b{background:#c0392b}
+#msg{color:#ff6b6b;min-height:20px}</style></head><body>
+<h1>♟ DarkX Draft</h1><div id="msg"></div>
+<div id="lobby"><input id="name" placeholder="Jina lako" maxlength="14"><br>
+<button onclick="go('quick')">⚡ Cheza Haraka</button><br><button class="s" onclick="go('create')">Tengeneza Room</button><br>
+<input id="code" placeholder="Code ya room" inputmode="numeric"><br><button class="s" onclick="go('join')">Ingia Room</button></div>
+<div id="game" style="display:none"><div id="info"></div><div id="board"></div>
+<button class="s" id="rs" onclick="S&&S.status==='over'?back():(confirm('Jiuzulu?')&&io1.emit('resign'))">Jiuzulu</button></div>
+<script src="config.js"></script>
+<script>
+let io1,S,sel=null;const $=i=>document.getElementById(i);$('name').value=localStorage.dn||'';
+function start(){io1=io(window.SERVER_URL||undefined);io1.on('err',m=>$('msg').textContent=m);io1.on('state',s=>{S=s;sel=null;$('msg').textContent='';render();});
+ io1.on('connect_error',()=>$('msg').textContent='Server haipatikani');}
+function go(t){const n=$('name').value.trim()||'Mchezaji';localStorage.dn=n;if(!io1)return;t==='join'?io1.emit('join',n,$('code').value.trim()):io1.emit(t,n);}
+function back(){io1.emit('leave');S=null;$('game').style.display='none';$('lobby').style.display='';}
+function render(){$('lobby').style.display='none';$('game').style.display='';const f=S.you==='b',el=$('board');el.innerHTML='';
+ const mine=S.legal.filter(m=>S.turn===S.you);
+ if(S.chain)sel=S.chain;
+ for(let i=0;i<8;i++)for(let j=0;j<8;j++){const r=f?7-i:i,c=f?7-j:j,d=document.createElement('div');d.className='c '+((r+c)%2?'d':'l');
+  const p=S.board[r][c];if(p){const k=document.createElement('div');k.className='p '+p.toLowerCase();if(p!==p.toLowerCase())k.textContent='♛';d.appendChild(k);}
+  if(sel&&sel[0]===r&&sel[1]===c)d.classList.add('sel');
+  if(sel&&mine.some(m=>m.fr===sel[0]&&m.fc===sel[1]&&m.tr===r&&m.tc===c))d.classList.add('hl');
+  d.onclick=()=>tap(r,c,mine);el.appendChild(d);}
+ let t;if(S.status==='waiting')t='Subiri mpinzani... Code: '+S.code;
+ else if(S.status==='over')t=(S.winner===S.you?'🏆 Umeshinda! ':'😢 Umeshindwa. ')+S.reason;
+ else t=(S.turn===S.you?'Zamu yako':'Zamu ya '+S.names[S.turn])+' | '+S.names.w+' (nyeupe) vs '+(S.names.b||'?')+' (nyekundu)';
+ $('info').textContent=t;$('rs').textContent=S.status==='over'?'Rudi Lobby':'Jiuzulu';}
+function tap(r,c,mine){if(S.status!=='playing'||S.turn!==S.you)return;
+ if(sel&&mine.some(m=>m.fr===sel[0]&&m.fc===sel[1]&&m.tr===r&&m.tc===c)){io1.emit('move',{fr:sel[0],fc:sel[1],tr:r,tc:c});sel=null;return;}
+ if(!S.chain&&mine.some(m=>m.fr===r&&m.fc===c)){sel=[r,c];render();}}
+const sc=document.createElement('script');sc.src=(window.SERVER_URL||'')+'/socket.io/socket.io.js';sc.onload=start;sc.onerror=()=>$('msg').textContent='Server haipatikani';document.body.appendChild(sc);
+</script></body></html>
